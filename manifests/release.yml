@@ -1,0 +1,9 @@
+version: 0.1.0
+
+server:
+  repo: lyra-ai-assistant/lyra-server
+  tag: v0.1.0
+
+ui:
+  repo: lyra-ai-assistant/lyra-ui
+  tag: v0.1.0

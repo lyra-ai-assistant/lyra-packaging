@@ -1,0 +1,10 @@
+post_install() {
+    echo ""
+    echo "Lyra has been installed."
+    echo "Run 'lyra-install-backend' to download the AI model for your hardware."
+    echo ""
+}
+
+post_upgrade() {
+    post_install
+}
