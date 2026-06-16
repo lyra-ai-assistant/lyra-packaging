@@ -1,0 +1,13 @@
+#!/bin/sh
+set -e
+
+case "$1" in
+    configure)
+        echo ""
+        echo "Lyra has been installed."
+        echo "Run 'lyra-install-backend' to download the AI model for your hardware."
+        echo ""
+        ;;
+esac
+
+exit 0

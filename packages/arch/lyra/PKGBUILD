@@ -1,0 +1,117 @@
+pkgname=lyra
+pkgver=1.1.0
+pkgrel=1
+pkgdesc="Lyra AI assistant for GNU/Linux"
+arch=('x86_64')
+url="https://github.com/AndresMpa/lyra"
+license=('MIT')
+depends=(
+    'gtk3'
+    'nss'
+    'libxss'
+    'python'
+)
+install=lyra.install
+
+_server_ver=0.1.0
+_ui_ver=0.1.0
+
+# For production, replace with GitHub Releases URLs:
+# source=(
+#     "lyra_server-${_server_ver}-py3-none-any.whl::https://github.com/AndresMpa/lyra/releases/download/v${pkgver}/lyra_server-${_server_ver}-py3-none-any.whl"
+#     "lyra-ui-${_ui_ver}.tar.gz::https://github.com/AndresMpa/lyra/releases/download/v${pkgver}/lyra-ui-${_ui_ver}.tar.gz"
+# )
+source=(
+    "lyra_server-${_server_ver}-py3-none-any.whl"
+    "lyra-ui-${_ui_ver}.tar.gz"
+)
+sha256sums=('SKIP' 'SKIP')
+
+_detect_pip() {
+    if command -v uv &>/dev/null; then
+        echo "uv pip"
+    elif command -v pip &>/dev/null; then
+        echo "pip"
+    elif command -v pip3 &>/dev/null; then
+        echo "pip3"
+    else
+        echo "ERROR: No Python package installer found (uv, pip, pip3)" >&2
+        return 1
+    fi
+}
+
+package() {
+    local vendor="$pkgdir/usr/lib/lyra/vendor"
+    local pip_cmd
+    pip_cmd=$(_detect_pip)
+    echo "==> Using installer: $pip_cmd"
+
+    # --- Python server + all deps vendored ---
+    install -dm755 "$vendor"
+    $pip_cmd install \
+        --no-deps \
+        --target="$vendor" \
+        "$srcdir/lyra_server-${_server_ver}-py3-none-any.whl"
+    $pip_cmd install \
+        --target="$vendor" \
+        fastapi==0.115.4 \
+        uvicorn==0.32.0 \
+        pydantic==2.9.2 \
+        markdown==3.6 \
+        huggingface-hub==0.26.2 \
+        "numpy>=2.0.0" \
+        regex==2024.9.11 \
+        tqdm==4.66.6 \
+        requests==2.32.3 \
+        "chromadb>=0.5.0"
+
+    # --- Wrappers ---
+    install -dm755 "$pkgdir/usr/bin"
+    cat > "$pkgdir/usr/bin/lyra" <<EOF
+#!/usr/bin/env python3
+import sys
+sys.path.insert(0, '/usr/lib/lyra/vendor')
+from lyra.cli.commands import main
+main()
+EOF
+    chmod 755 "$pkgdir/usr/bin/lyra"
+
+    cat > "$pkgdir/usr/bin/lyra-install-backend" <<EOF
+#!/usr/bin/env python3
+import sys
+sys.path.insert(0, '/usr/lib/lyra/vendor')
+from lyra.scripts.install_backend import detect_and_install
+detect_and_install()
+EOF
+    chmod 755 "$pkgdir/usr/bin/lyra-install-backend"
+
+    # --- Electron UI ---
+    install -dm755 "$pkgdir/opt/lyra"
+    tar -xzf "$srcdir/lyra-ui-${_ui_ver}.tar.gz" \
+        -C "$pkgdir/opt/lyra" --strip-components=1
+    ln -sf /opt/lyra/lyra-ui "$pkgdir/usr/bin/lyra-ui"
+
+    # --- Desktop entry ---
+    install -dm755 "$pkgdir/usr/share/applications"
+    cat > "$pkgdir/usr/share/applications/lyra.desktop" <<EOF
+[Desktop Entry]
+Name=Lyra
+Comment=Lyra AI assistant for GNU/Linux
+Exec=lyra-ui
+Icon=/opt/lyra/resources/app/assets/app/256x256.png
+Terminal=false
+Type=Application
+Categories=Utility;
+EOF
+
+    # --- Remove srcdir reference from dist-info ---
+    find "$pkgdir/usr/lib/lyra/vendor" \
+        -name "direct_url.json" -delete
+
+    # --- Docs ---
+    install -Dm644 /dev/null "$pkgdir/usr/share/doc/lyra/README"
+    cat > "$pkgdir/usr/share/doc/lyra/README" <<EOF
+Lyra AI assistant
+Run 'lyra-install-backend' after installation to download the AI model.
+EOF
+}

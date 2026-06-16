@@ -1,0 +1,25 @@
+Package: lyra
+Version: 1.1.0-1
+Section: utils
+Priority: optional
+Architecture: amd64
+Depends: python3 (>= 3.13),
+         python3-fastapi,
+         python3-uvicorn,
+         python3-pydantic,
+         python3-markdown,
+         python3-huggingface-hub,
+         python3-numpy,
+         python3-regex,
+         python3-tqdm,
+         python3-requests,
+         libgtk-3-0,
+         libnss3,
+         libxss1
+Maintainer: AndresMpa <ing.andres.m.prieto@gmail.com>
+Homepage: https://github.com/AndresMpa/lyra
+Description: Lyra AI assistant for GNU/Linux
+ Lyra is a local AI assistant that runs on GNU/Linux systems.
+ It includes a FastAPI backend server and an Electron desktop UI.
+ After installation, run 'lyra-install-backend' to download
+ the AI model appropriate for your hardware.
