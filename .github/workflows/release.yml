@@ -1,0 +1,136 @@
+name: Release
+
+on:
+  repository_dispatch:
+    types: [lyra-server-release, lyra-ui-release]
+  pull_request:
+    types: [closed]
+    branches: [main]
+
+jobs:
+  bump-patch:
+    if: github.event_name == 'repository_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Bump patch version
+        run: ./scripts/bump-version.sh patch
+
+      - name: Sync version to PKGBUILD and control
+        run: ./scripts/sync-version.sh
+
+      - name: Commit version bump
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add VERSION packages/arch/lyra/PKGBUILD packages/debian/lyra/DEBIAN/control scripts/build-deb.sh
+          git commit -m "chore: bump patch to $(cat VERSION)"
+          git push
+
+  bump-feature:
+    if: |
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.merged == true &&
+      contains(github.event.pull_request.labels.*.name, 'release')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Bump feature version
+        run: ./scripts/bump-version.sh feature
+
+      - name: Sync version to PKGBUILD and control
+        run: ./scripts/sync-version.sh
+
+      - name: Commit version bump
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add VERSION packages/arch/lyra/PKGBUILD packages/debian/lyra/DEBIAN/control scripts/build-deb.sh
+          git commit -m "chore: bump feature to $(cat VERSION)"
+          git push
+
+  bump-major:
+    if: |
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.merged == true &&
+      contains(github.event.pull_request.labels.*.name, 'breaking-release')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Bump major version
+        run: ./scripts/bump-version.sh major
+
+      - name: Sync version to PKGBUILD and control
+        run: ./scripts/sync-version.sh
+
+      - name: Commit version bump
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add VERSION packages/arch/lyra/PKGBUILD packages/debian/lyra/DEBIAN/control scripts/build-deb.sh
+          git commit -m "chore: bump major to $(cat VERSION)"
+          git push
+
+  build-debian:
+    needs: [bump-patch, bump-feature, bump-major]
+    if: |
+      always() &&
+      (needs.bump-patch.result == 'success' ||
+       needs.bump-feature.result == 'success' ||
+       needs.bump-major.result == 'success')
+    uses: ./.github/workflows/debian.yml
+    secrets: inherit
+
+  build-arch:
+    needs: [bump-patch, bump-feature, bump-major]
+    if: |
+      always() &&
+      (needs.bump-patch.result == 'success' ||
+       needs.bump-feature.result == 'success' ||
+       needs.bump-major.result == 'success')
+    uses: ./.github/workflows/arch.yml
+    secrets: inherit
+
+  publish:
+    needs: [build-debian, build-arch]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Get version
+        id: version
+        run: echo "value=v$(cat VERSION)" >> $GITHUB_OUTPUT
+
+      - name: Download deb artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: lyra-deb
+          path: dist/
+
+      - name: Download arch artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: lyra-arch
+          path: dist/
+
+      - name: Create tag
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag ${{ steps.version.outputs.value }}
+          git push origin ${{ steps.version.outputs.value }}
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.value }}
+          generate_release_notes: true
+          files: dist/*
