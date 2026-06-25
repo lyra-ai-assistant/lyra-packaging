@@ -1,0 +1,32 @@
+name: Build Arch package
+
+on:
+  workflow_call:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container:
+      image: archlinux:latest
+
+    steps:
+      - name: Install dependencies
+        run: |
+          pacman -Syu --noconfirm
+          pacman -S --noconfirm git base-devel github-cli
+
+      - uses: actions/checkout@v4
+
+      - name: Download artifacts
+        run: ./scripts/build-app-ci.sh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build .pkg.tar.zst
+        run: ./scripts/build-arch.sh
+
+      - name: Upload .pkg.tar.zst
+        uses: actions/upload-artifact@v4
+        with:
+          name: lyra-arch
+          path: packages/arch/lyra/*.pkg.tar.zst
