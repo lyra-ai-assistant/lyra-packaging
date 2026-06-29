@@ -1,0 +1,32 @@
+name: Build Debian package
+
+on:
+  workflow_call:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install gh CLI dependencies
+        run: sudo apt-get install -y gh
+
+      - name: Download artifacts
+        run: ./scripts/build-app-ci.sh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Build .deb
+        run: ./scripts/build-deb.sh
+
+      - name: Upload .deb
+        uses: actions/upload-artifact@v4
+        with:
+          name: lyra-deb
+          path: dist/*.deb
