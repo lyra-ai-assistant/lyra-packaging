@@ -98,4 +98,3 @@ sudo apt remove lyra
 
 - `lyra-server`: AGPL-3.0
 - `lyra-ui`: MIT
-```
