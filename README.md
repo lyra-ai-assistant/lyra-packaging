@@ -99,9 +99,3 @@ sudo apt remove lyra
 - `lyra-server`: AGPL-3.0
 - `lyra-ui`: MIT
 ```
-
----
-
-This README is now the primary, end‑user facing documentation for the `lyra-packaging` repository. All build‑pipeline details (scripts, CI/CD, versioning) have been moved out of the main README — they can be documented separately (e.g., in a `CONTRIBUTING.md` or `DEVELOPER.md`) to keep the user experience clean and focused.
-
-If you want to keep some developer information in the README (e.g., a brief "Building from source" section), I can add that back, but the checkpoint explicitly states it's "user‑facing, installation focused". I recommend keeping it as is. Let me know if you need any adjustments.
