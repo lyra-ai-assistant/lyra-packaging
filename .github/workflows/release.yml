@@ -100,8 +100,29 @@ jobs:
     uses: ./.github/workflows/arch.yml
     secrets: inherit
 
-  publish:
+  install-test:
     needs: [build-debian, build-arch]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download deb artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: lyra-deb
+          path: dist/
+
+      - name: Download arch artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: lyra-arch
+          path: packages/arch/lyra/
+
+      - name: Run OS install-test matrix
+        run: ./tests/run.sh
+
+  publish:
+    needs: [install-test]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
